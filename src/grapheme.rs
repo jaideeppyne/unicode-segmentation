@@ -623,7 +623,10 @@ impl GraphemeCursor {
             let mut need_pre_context = true;
             match self.cat_after.unwrap() {
                 gr::GC_InCB_Consonant => self.state = GraphemeState::InCbConsonant,
-                gr::GC_Regional_Indicator => self.state = GraphemeState::Regional,
+                // Only look back for the RI count if it isn't known already.
+                gr::GC_Regional_Indicator if self.ris_count.is_none() => {
+                    self.state = GraphemeState::Regional
+                }
                 gr::GC_Extended_Pictographic => {
                     self.state = GraphemeState::Emoji { seen_zwj: false }
                 }
@@ -845,6 +848,25 @@ impl GraphemeCursor {
             self.resuming = false;
         }
     }
+}
+
+#[test]
+fn test_grapheme_cursor_ris_count_across_chunks() {
+    use GraphemeIncomplete::*;
+
+    let chunk0 = "a"; // 1 byte
+    let chunk1 = "\u{1f1e6}"; // 4 bytes
+    let chunk2 = "\u{1f1e6}"; // 4 bytes
+    let full_len = chunk0.len() + chunk1.len() + chunk2.len(); // 9
+    let chunk1_start = chunk0.len();
+    let chunk2_start = chunk0.len() + chunk1.len();
+
+    let mut c = GraphemeCursor::new(0, full_len, true);
+    assert_eq!(c.next_boundary(chunk0, 0), Err(NextChunk));
+    assert_eq!(c.next_boundary(chunk1, chunk1_start), Ok(Some(1)));
+    assert_eq!(c.next_boundary(chunk1, chunk1_start), Err(NextChunk));
+    assert_eq!(c.next_boundary(chunk2, chunk2_start), Ok(Some(9)));
+    assert_eq!(c.next_boundary(chunk2, chunk2_start), Ok(None));
 }
 
 #[test]
