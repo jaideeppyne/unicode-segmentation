@@ -150,7 +150,7 @@ fn test_grapheme_cursor_chunked_matches_iterator() {
                         Err(GraphemeIncomplete::PreContext(n)) => {
                             cursor.provide_context(&s[..n], 0);
                         }
-                        Err(e) => panic!("{s:?} at {offset}: unexpected {e:?}"),
+                        Err(e) => panic!("{:?} at {}: unexpected {:?}", s, offset, e),
                     }
                 };
                 assert_eq!(
